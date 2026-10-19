@@ -352,7 +352,7 @@ function render(){
   document.querySelectorAll("#tabs button").forEach(b=>{ b.setAttribute("aria-selected", b.dataset.tab===S.tab); b.hidden=(b.dataset.tab==="lager"&&!S.set.lager)||(b.dataset.tab==="autos"&&!S.set.autos); });
   if((S.tab==="lager"&&!S.set.lager)||(S.tab==="autos"&&!S.set.autos)) S.tab="home";
   const t={home,neu,kunden,ausw:auswertung,auftrag:(r)=>S.jobOpen?jobDetail(S.jobOpen):auftrag(r),qr:()=>`<div style="max-width:620px;width:100%;margin:0 auto">${qrPanel()}</div>`,lager,liste,autos,steuern,setup}[S.tab];
-  V().innerHTML=(S.mode==="lokal"?`<div class="banner">Der Speicher auf diesem Gerät ist nicht verfügbar (privates Surfen?). Daten werden nicht dauerhaft gespeichert.</div>`:"")+t(r);
+  V().innerHTML=(S.mode==="lokal"?`<div class="banner">Der Speicher auf diesem Gerät ist nicht verfügbar (privates Surfen?). Daten werden nicht dauerhaft gespeichert.</div>`:"")+(S.tab==="home"&&window.driveBox?driveBox():"")+t(r);
   bind();
 }
 /* Re-render, aber getippte Werte im Formular behalten */
@@ -1303,7 +1303,7 @@ async function backup(btn){
   if(saved) markBackup(); if(btn) btn.disabled=false;
 }
 function markBackup(){ S.set.lastBackup=today(); store.saveSet().catch(()=>{}); }
-function backupBanner(){ const l=S.set.lastBackup; const days=l? Math.floor((new Date()-new Date(l))/864e5) : 999; if(days<30||!S.entries.length) return "";
+function backupBanner(){ if(window.driveFresh&&driveFresh()) return ""; const l=S.set.lastBackup; const days=l? Math.floor((new Date()-new Date(l))/864e5) : 999; if(days<30||!S.entries.length) return "";
   return `<div class="banner" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between"><span><b>${l?`Letzte Sicherung vor ${days} Tagen.`:"Noch keine Sicherung gemacht."}</b> Lade eine Komplett-Sicherung herunter (Daten, Belege, Rechnungen) und speichere sie bei dir.</span><button class="btn sm" data-act="backup">Jetzt sichern</button></div>`; }
 const belegPfad=e=>`belege/${(e.datum||"").slice(0,4)}/${e.datum}_${(e.text||KMAP[e.kat]?.l||"Beleg").replace(/[^\wäöüÄÖÜ .-]/g,"").slice(0,40)}_${(+e.betrag).toFixed(2)}_${e.id.slice(-4)}`;
 async function restoreZipOrJson(file){
@@ -1471,7 +1471,7 @@ function steuern(r){
 /* ---------- Einstellungen ---------- */
 function setup(){
   const s=S.set;
-  return `<div class="panel" style="max-width:680px"><h2>Einstellungen</h2>
+  return `${window.drivePanel?drivePanel():""}<div class="panel" style="max-width:680px"><h2>Einstellungen</h2>
   <form id="fSet" class="fields">
    <div style="grid-column:1/-1;display:flex;gap:14px;align-items:center;flex-wrap:wrap">${s.logo?`<img src="${s.logo}" alt="Dein Logo" style="max-height:56px;max-width:200px;background:#fff;padding:4px;border-radius:6px;border:1px solid var(--line)">`:`<span class="small muted">Noch kein Logo – erscheint oben links auf Rechnungen und Kostenvoranschlägen.</span>`}
      <label class="btn ghost filebtn sm">${s.logo?"Logo ersetzen":"Logo hochladen"}<input type="file" id="sLogo" accept="image/png,image/jpeg,image/webp" aria-label="Logo hochladen"></label>${s.logo?`<button type="button" class="btn ghost sm" data-act="logo-del">Entfernen</button>`:""}</div>
@@ -1664,6 +1664,9 @@ let tT; function toast(m){const t=document.getElementById("toast");t.textContent
 document.getElementById("tabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;S.tab=b.dataset.tab;S.del=null;S.jobOpen=null;S.kundeOpen=null;render();scrollTo(0,0);});
 document.getElementById("yearSel").addEventListener("change",e=>{S.year=+e.target.value;S.aper=null;render();});
 render(); store.init();
+</script>
+<script src="drive.js"></script>
+<script>
 if("serviceWorker" in navigator && location.protocol!=="file:") navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
 </body>

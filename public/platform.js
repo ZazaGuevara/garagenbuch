@@ -63,12 +63,49 @@
       async get(){ const rows=await tx("docs","readonly",s=>s.index("coll").getAll(coll)); return {docs:(rows||[]).map(r=>({id:split(r.path)[1],data:()=>r.data}))}; }
     }; },
     doc(path){ return {
-      async set(data){ await tx("docs","readwrite",s=>s.put({path,coll:split(path)[0],data:structuredClone(data),updated:Date.now()})); changed(path,"set"); },
-      async delete(){ await tx("docs","readwrite",s=>s.delete(path)); changed(path,"delete"); },
+      async set(data){ await tx("docs","readwrite",s=>s.put({path,coll:split(path)[0],data:structuredClone(data),updated:stamp()})); await meta.del("tomb:"+path); changed(path,"set"); },
+      async delete(){ await tx("docs","readwrite",s=>s.delete(path)); await meta.set("tomb:"+path,stamp()); changed(path,"delete"); },
       async get(){ const r=await tx("docs","readonly",s=>s.get(path)); return {exists:!!r,data:()=>r?.data}; },
       onSnapshot(cb,errCb){ return sub(docSubs,path,cb,errCb,async()=>{ const r=await tx("docs","readonly",s=>s.get(path)); cb({exists:!!r,data:()=>r?.data}); }); }
     }; }
   };
+
+  /* ---------- Kleiner Notizblock (Einstellungen der Sicherung, Löschmarken) ---------- */
+  const meta={
+    async get(key){ const r=await tx("meta","readonly",s=>s.get(key)); return r? r.value : undefined; },
+    async set(key,value){ await tx("meta","readwrite",s=>s.put({key,value})); },
+    async del(key){ await tx("meta","readwrite",s=>s.delete(key)); },
+    async all(prefix){ const rows=await tx("meta","readonly",s=>s.getAll()); return (rows||[]).filter(r=>r.key.startsWith(prefix)); }
+  };
+  /* Zeitstempel, der auch bei zwei Änderungen in derselben Millisekunde weiterzählt */
+  let lastStamp=0; const stamp=()=>(lastStamp=Math.max(Date.now(),lastStamp+1));
+
+  /* ---------- Abgleich zwischen Geräten (über Google Drive) ----------
+     Jeder Eintrag hat einen Zeitstempel der letzten Änderung, Löschungen hinterlassen eine Löschmarke.
+     Beim Zusammenführen gewinnt pro Eintrag die neuere Änderung. */
+  async function exportSync(){
+    const docs=await tx("docs","readonly",s=>s.getAll());
+    const tombs={}; for(const r of await meta.all("tomb:")) tombs[r.key.slice(5)]=r.value;
+    return {docs:(docs||[]).map(d=>({path:d.path,data:d.data,updated:d.updated||0})),tombs};
+  }
+  async function applyRemote(remoteDocs,remoteTombs){
+    const touched=[];
+    for(const [path,rd] of Object.entries(remoteDocs||{})){
+      const local=await tx("docs","readonly",s=>s.get(path)), tomb=await meta.get("tomb:"+path)||0, ru=+rd.u||0;
+      if(tomb && tomb>=ru) continue;
+      if(local && !(ru>(local.updated||0))) continue;
+      await tx("docs","readwrite",s=>s.put({path,coll:split(path)[0],data:rd.data,updated:ru}));
+      if(tomb) await meta.del("tomb:"+path);
+      touched.push(path);
+    }
+    for(const [path,ts] of Object.entries(remoteTombs||{})){
+      const local=await tx("docs","readonly",s=>s.get(path)), mine=await meta.get("tomb:"+path)||0;
+      if(local && (local.updated||0)<ts){ await tx("docs","readwrite",s=>s.delete(path)); await meta.set("tomb:"+path,ts); touched.push(path); }
+      else if(!local && ts>mine) await meta.set("tomb:"+path,ts);
+    }
+    for(const path of touched){ const [coll]=split(path); emitColl(coll); emitDoc(path); }
+    return touched.length;
+  }
 
   /* ---------- Belegdateien ---------- */
   const assets={
@@ -148,7 +185,7 @@
 
   window.platform={
     async use(name){ if(name==="db"){ try{ await openDb(); }catch(e){ return null; } } return caps[name]||null; },
-    fetchBlob, getBlob, putBlobWithId, newId,
+    fetchBlob, getBlob, putBlobWithId, newId, meta, exportSync, applyRemote, stamp,
     onChange(fn){ changeSubs.add(fn); return ()=>changeSubs.delete(fn); }
   };
 })();
