@@ -180,11 +180,42 @@
   /* Daten dauerhaft speichern lassen (Browser darf sie dann nicht von sich aus aufräumen) */
   try{ navigator.storage?.persist?.(); }catch(e){}
 
+  /* ---------- Belege lesen mit Claude (über die eigene Server-Funktion /api/sample) ----------
+     Gleiche Schnittstelle wie vorher in Claude.ai: limits() und json(prompt,{images,signal}).
+     Nur verfügbar, wenn das Gerät mit Google verbunden ist (gleiche Anmeldung). */
+  const b64=blob=>new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]||""); r.onerror=()=>rej(r.error); r.readAsDataURL(blob); });
+  function parseJson(text){
+    const t=String(text||"").replace(/^\s*```(?:json)?/i,"").replace(/```\s*$/,"").trim();
+    try{ return JSON.parse(t); }catch(e){}
+    const a=t.indexOf("{"), z=t.lastIndexOf("}");
+    if(a>=0&&z>a){ try{ return JSON.parse(t.slice(a,z+1)); }catch(e){} }
+    throw {code:"invalid_json"};
+  }
+  async function sampleCap(){
+    const dev=await meta.get("drive:device").catch(()=>null);
+    if(!dev) return null;
+    const auth={Authorization:"Bearer "+dev};
+    return {
+      async limits(){
+        try{ const r=await fetch("/api/sample",{headers:auth}); if(!r.ok) return null; const j=await r.json(); return {images:!!j.images,used:j.used,limit:j.limit}; }catch(e){ return null; }
+      },
+      async json(prompt,opt={}){
+        const images=[]; for(const b of (opt.images||[])) images.push({media_type:/^image\/(png|webp|gif)$/.test(b.type)?b.type:"image/jpeg",data:await b64(b)});
+        let r;
+        try{ r=await fetch("/api/sample",{method:"POST",headers:{...auth,"Content-Type":"application/json"},body:JSON.stringify({prompt,images}),signal:opt.signal}); }
+        catch(e){ throw {code:e?.name==="AbortError"?"cancelled":"offline"}; }
+        const j=await r.json().catch(()=>({}));
+        if(!r.ok) throw {code:j.error||("http_"+r.status),message:j.message};
+        return parseJson(j.text);
+      }
+    };
+  }
+
   const user={ async id(){ return "lokal"; } };
-  const caps={db,user,assets,downloads,sample:null};
+  const caps={db,user,assets,downloads};
 
   window.platform={
-    async use(name){ if(name==="db"){ try{ await openDb(); }catch(e){ return null; } } return caps[name]||null; },
+    async use(name){ if(name==="db"){ try{ await openDb(); }catch(e){ return null; } } if(name==="sample") return sampleCap(); return caps[name]||null; },
     fetchBlob, getBlob, putBlobWithId, newId, meta, exportSync, applyRemote, stamp,
     onChange(fn){ changeSubs.add(fn); return ()=>changeSubs.delete(fn); }
   };

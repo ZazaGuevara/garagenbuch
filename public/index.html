@@ -418,7 +418,7 @@ function neu(){
           f.scan==="done"?`<b>Beleg gelesen.</b> Bitte kurz prüfen und speichern.${f.scanMsg?` <span class="muted">${esc(f.scanMsg)}</span>`:""}`:
           f.scan==="attached"?`<b>Foto angehängt.</b> <span class="muted">${esc(f.scanMsg)}</span>`:
           f.scan==="error"?`<span class="neg">${esc(f.scanMsg)}</span>`:
-          `<b>Beleg fotografieren</b><br><span class="small muted">${S.canScan?"Foto oder PDF einer Quittung/Rechnung – Betrag, Datum, Lieferant und Positionen werden automatisch ausgefüllt.":"Das Foto wird als Beleg gespeichert. Automatisches Auslesen ist noch nicht eingerichtet – Betrag bitte unten eintragen."}</span>`}</p>
+          `<b>Beleg fotografieren</b><br><span class="small muted">${S.canScan?"Foto oder PDF einer Quittung/Rechnung – Betrag, Datum, Lieferant und Positionen werden automatisch ausgefüllt.":"Das Foto wird als Beleg gespeichert. Automatisches Auslesen: zuerst unter Einstellungen mit Google verbinden – bis dahin Betrag bitte unten eintragen."}</span>`}</p>
       <div class="actions">${f.scan==="busy"?`<button class="btn ghost sm" type="button" data-act="scan-stop">Abbrechen</button>`:pick}</div>
     </div>`;
   const posHtml = f.pos.length? `<div class="poslist"><span class="small muted"><b>${f.pos.length} Positionen erkannt</b> (Preise exkl. MWST)</span>
@@ -514,6 +514,8 @@ Regeln: total = Endbetrag (inkl. allfälliger MWST) in CHF (Zahl). mwst = haupts
     f.scanMsg = e?.code==="not_granted" ? "Du hast Claude den Zugriff nicht erlaubt. Erfasse den Beleg von Hand oder versuche es nach dem Neuladen nochmals." :
                 e?.code==="invalid_json" ? "Beleg nicht lesbar. Bitte schärfer und ganz im Bild fotografieren, oder von Hand erfassen." :
                 e?.code==="rate_limited" ? "Gerade zu viele Anfragen. Bitte in einer Minute nochmals." :
+                e?.code==="limit" ? "Das Monatslimit fürs automatische Lesen ist erreicht. Bitte Betrag von Hand eintragen." :
+                e?.code==="offline" ? "Kein Internet – das Foto bleibt angehängt, bitte Betrag von Hand eintragen." :
                 "Beleg konnte nicht automatisch gelesen werden ("+(e?.code||"Fehler")+"). Das Foto bleibt angehängt – bitte Betrag von Hand eintragen.";
     soft();
   }
@@ -869,8 +871,10 @@ async function versFile(file){
     S.vers.sbMode = v.selbstbehalt>0? "sep" : "keiner"; render(); scrollTo(0,0);
   }catch(e){
     S.vers={status:"error", msg: e?.code==="not_granted"?"Du hast Claude den Zugriff nicht erlaubt. Lade die Seite neu und erlaube den Zugriff.":
-      e?.code==="unavailable"||e?.code==="images_unavailable"?"Automatisches Auslesen ist noch nicht eingerichtet. Tippe auf «Von Hand erfassen» und übertrage die Positionen aus der Kalkulation.":
+      e?.code==="unavailable"||e?.code==="images_unavailable"?"Automatisches Auslesen ist nicht verfügbar (zuerst unter Einstellungen mit Google verbinden). Tippe auf «Von Hand erfassen» und übertrage die Positionen aus der Kalkulation.":
       e?.code==="invalid_json"?"Die Kalkulation konnte nicht vollständig gelesen werden. Versuche es mit der PDF-Datei statt einem Foto.":
+      e?.code==="limit"?"Das Monatslimit fürs automatische Lesen ist erreicht. Bitte «Von Hand erfassen».":
+      e?.code==="offline"?"Kein Internet. Bitte später nochmals oder «Von Hand erfassen».":
       "Fehler beim Lesen: "+(e?.message||e?.code||e)}; render();
   }
 }

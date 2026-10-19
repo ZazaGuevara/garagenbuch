@@ -1,0 +1,8 @@
+{
+  "name": "garagenbuch",
+  "private": true,
+  "description": "Garagenbuch – Buchhaltungs-App für Garage Dornach Coskun (Cloudflare Worker + PWA)",
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.135.0"
+  }
+}

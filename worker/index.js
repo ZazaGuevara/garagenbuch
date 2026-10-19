@@ -13,6 +13,8 @@
    Speicher (KV «GB»):  owner = E-Mail des Inhabers (erstes verbundenes Konto) · rt = Google-Schlüssel ·
    at = aktueller Drive-Zugang · dev:<hash> = bekannte Geräte · pair:<nr> = Kopplung (10 Min.) */
 
+import Anthropic from "@anthropic-ai/sdk";
+
 const SCOPE = "openid email https://www.googleapis.com/auth/drive.file";
 const json = (d, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
 
@@ -26,6 +28,7 @@ export default {
       if (url.pathname === "/api/auth/logout" && req.method === "POST") return await logout(req, env);
       if (url.pathname === "/api/token") return await token(req, env);
       if (url.pathname === "/api/status") return await status(env);
+      if (url.pathname === "/api/sample") return await sample(req, env);
       if (url.pathname.startsWith("/api/")) return json({ error: "not_found" }, 404);
       return env.ASSETS.fetch(req);
     } catch (e) {
@@ -114,6 +117,50 @@ async function token(req, env) {
   return json({ access_token: t.access_token, expires_at: exp, email: d.email });
 }
 
+/* ---------- Belege und Kalkulationen lesen (Claude) ----------
+   Nur für verbundene Geräte des Inhabers. Monatslimit (Anzahl) als Schutz vor unerwarteten Kosten. */
+const MODEL = "claude-opus-5-5";
+const IMG_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+async function sample(req, env) {
+  const d = await device(req, env);
+  if (!d) return json({ error: "not_granted" }, 401);
+  if (!env.ANTHROPIC_API_KEY) return json({ error: "unavailable" }, 503);
+  const month = new Date().toISOString().slice(0, 7), limit = +env.SCAN_LIMIT || 300;
+  const used = +(await env.GB.get("scan:" + month)) || 0;
+  if (req.method === "GET") return json({ images: true, used, limit });
+  if (req.method !== "POST") return json({ error: "bad_request" }, 405);
+  if (used >= limit) return json({ error: "limit", used, limit }, 429);
+  const { prompt, images } = await req.json().catch(() => ({}));
+  if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 200000) return json({ error: "bad_request" }, 400);
+  const imgs = Array.isArray(images) ? images : [];
+  if (imgs.length > 6 || imgs.some(i => !IMG_TYPES.includes(i?.media_type) || typeof i?.data !== "string" || i.data.length > 7e6)) return json({ error: "bad_request" }, 400);
+  await env.GB.put("scan:" + month, String(used + 1), { expirationTtl: 400 * 86400 });
+  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, ...(env.ANTHROPIC_BASE_URL ? { baseURL: env.ANTHROPIC_BASE_URL } : {}) }); // BASE_URL nur für lokale Tests
+  try {
+    const msg = await client.beta.messages.create({
+      model: MODEL,
+      max_tokens: 16000,
+      output_config: { effort: "medium" },
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      messages: [{ role: "user", content: [
+        ...imgs.map(i => ({ type: "image", source: { type: "base64", media_type: i.media_type, data: i.data } })),
+        { type: "text", text: prompt }
+      ] }]
+    });
+    if (msg.stop_reason === "refusal") return json({ error: "refused" }, 422);
+    if (msg.stop_reason === "max_tokens") return json({ error: "invalid_json" }, 422);
+    const text = msg.content.filter(b => b.type === "text").map(b => b.text).join("");
+    return json({ text, used: used + 1, limit });
+  } catch (e) {
+    if (e instanceof Anthropic.RateLimitError) return json({ error: "rate_limited" }, 429);
+    if (e instanceof Anthropic.AuthenticationError) return json({ error: "api_key" }, 502);
+    if (e instanceof Anthropic.BadRequestError) return json({ error: "bad_request", message: e.message }, 400);
+    if (e instanceof Anthropic.APIError) return json({ error: "claude", message: e.message }, 502);
+    throw e;
+  }
+}
+
 /* Prüfseite: zeigt, ob die Einstellungen bei Cloudflare ankommen (nur ja/nein, nie die Werte) */
 async function status(env) {
   const has = k => typeof env[k] === "string" && env[k].trim().length > 0;
@@ -128,6 +175,7 @@ async function status(env) {
 ${row("GOOGLE_CLIENT_ID", has("GOOGLE_CLIENT_ID"), "Bei Cloudflare unter Settings → «Variables and Secrets» (nicht unter «Build») eintragen.")}
 ${has("GOOGLE_CLIENT_ID") ? row("Client-ID sieht richtig aus", idOk, "Die Client-ID muss auf .apps.googleusercontent.com enden – evtl. wurde der Clientschlüssel ins falsche Feld kopiert.", "✅ ja", "❌ nein") : ""}
 ${row("GOOGLE_CLIENT_SECRET", has("GOOGLE_CLIENT_SECRET"), "Bei Cloudflare unter Settings → «Variables and Secrets» (nicht unter «Build») eintragen.")}
+${row("ANTHROPIC_API_KEY (Belege lesen)", has("ANTHROPIC_API_KEY"), "Unter Settings → Build → Variables and secrets als Secret eintragen, dann neu bereitstellen.")}
 ${row("Speicher (KV)", kv, "")}
 </table><p><small>Verbunden mit Google: ${owner ? "ja" : "noch nicht"}<br>Vorhandene Namen: ${esc(names)}</small></p></main></body></html>`,
     { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
