@@ -4,6 +4,8 @@
   "name": "garagenbuch",
   "main": "worker/index.js",
   "compatibility_date": "2025-09-01",
+  // Im Dashboard eingetragene Variablen bei jedem Update behalten
+  "keep_vars": true,
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
