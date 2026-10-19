@@ -25,6 +25,7 @@ export default {
       if (url.pathname === "/api/auth/claim" && req.method === "POST") return await claim(req, env);
       if (url.pathname === "/api/auth/logout" && req.method === "POST") return await logout(req, env);
       if (url.pathname === "/api/token") return await token(req, env);
+      if (url.pathname === "/api/status") return await status(env);
       if (url.pathname.startsWith("/api/")) return json({ error: "not_found" }, 404);
       return env.ASSETS.fetch(req);
     } catch (e) {
@@ -111,6 +112,25 @@ async function token(req, env) {
   const exp = Date.now() + (t.expires_in - 120) * 1000;
   await env.GB.put("at", JSON.stringify({ token: t.access_token, exp }));
   return json({ access_token: t.access_token, expires_at: exp, email: d.email });
+}
+
+/* Prüfseite: zeigt, ob die Einstellungen bei Cloudflare ankommen (nur ja/nein, nie die Werte) */
+async function status(env) {
+  const has = k => typeof env[k] === "string" && env[k].trim().length > 0;
+  const idOk = has("GOOGLE_CLIENT_ID") && env.GOOGLE_CLIENT_ID.trim().endsWith(".apps.googleusercontent.com");
+  let kv = false; try { await env.GB.get("owner"); kv = true; } catch (e) {}
+  const owner = kv ? await env.GB.get("owner") : null;
+  const row = (l, ok, hint, yes = "✅ vorhanden", no = "❌ fehlt") => `<tr><td>${l}</td><td style="text-align:right">${ok ? yes : no}</td></tr>${!ok && hint ? `<tr><td colspan="2" style="color:#9A6A12;font-size:.9rem;padding-bottom:10px">${hint}</td></tr>` : ""}`;
+  const names = Object.keys(env).filter(k => !["ASSETS", "GB"].includes(k)).sort().join(", ") || "keine";
+  return new Response(`<!doctype html><html lang="de-CH"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Prüfung – Garagenbuch</title>
+<style>body{margin:0;font:17px/1.5 -apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#F1F1F2;color:#1C1C1F}main{max-width:520px;margin:6vh auto;padding:16px}table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px}td{padding:10px 12px;border-bottom:1px solid #eee}small{color:#626268}</style></head>
+<body><main><h1>Garagenbuch – Prüfung</h1><table>
+${row("GOOGLE_CLIENT_ID", has("GOOGLE_CLIENT_ID"), "Bei Cloudflare unter Settings → «Variables and Secrets» (nicht unter «Build») eintragen.")}
+${has("GOOGLE_CLIENT_ID") ? row("Client-ID sieht richtig aus", idOk, "Die Client-ID muss auf .apps.googleusercontent.com enden – evtl. wurde der Clientschlüssel ins falsche Feld kopiert.", "✅ ja", "❌ nein") : ""}
+${row("GOOGLE_CLIENT_SECRET", has("GOOGLE_CLIENT_SECRET"), "Bei Cloudflare unter Settings → «Variables and Secrets» (nicht unter «Build») eintragen.")}
+${row("Speicher (KV)", kv, "")}
+</table><p><small>Verbunden mit Google: ${owner ? "ja" : "noch nicht"}<br>Vorhandene Namen: ${esc(names)}</small></p></main></body></html>`,
+    { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
 }
 
 /* ---------- Hilfen ---------- */
