@@ -1,6 +1,6 @@
 /* Service Worker: hält die App-Dateien im Gerät, damit das Garagenbuch auch ohne Internet startet.
    Bei jeder neuen Version VERSION erhöhen – dann holt sich die App die neuen Dateien. */
-const VERSION = "gb-4";
+const VERSION = "gb-5";
 const FILES = [
   "./", "platform.js", "drive.js", "manifest.webmanifest",
   "fonts/fonts.css",

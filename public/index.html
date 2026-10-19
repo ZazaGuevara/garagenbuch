@@ -869,7 +869,7 @@ async function versFile(file){
     S.vers.sbMode = v.selbstbehalt>0? "sep" : "keiner"; render(); scrollTo(0,0);
   }catch(e){
     S.vers={status:"error", msg: e?.code==="not_granted"?"Du hast Claude den Zugriff nicht erlaubt. Lade die Seite neu und erlaube den Zugriff.":
-      e?.code==="unavailable"||e?.code==="images_unavailable"?"Automatisches Auslesen ist noch nicht eingerichtet. Bis dahin Versicherungsschäden bitte in der bisherigen App abrechnen.":
+      e?.code==="unavailable"||e?.code==="images_unavailable"?"Automatisches Auslesen ist noch nicht eingerichtet. Tippe auf «Von Hand erfassen» und übertrage die Positionen aus der Kalkulation.":
       e?.code==="invalid_json"?"Die Kalkulation konnte nicht vollständig gelesen werden. Versuche es mit der PDF-Datei statt einem Foto.":
       "Fehler beim Lesen: "+(e?.message||e?.code||e)}; render();
   }
@@ -890,13 +890,13 @@ function versCalc(){
 function versPanel(){
   const V2=S.vers;
   const up=`<label class="btn filebtn">Kalkulation hochladen (PDF oder Foto)<input type="file" class="versIn" accept="application/pdf,image/*" aria-label="Kostenzusammenstellung der Versicherung hochladen"></label>`;
-  if(!V2||V2.status==="idle") return `<div class="scan"><p><b>Versicherungsschaden abrechnen</b><br><span class="small muted">Kostenzusammenstellung vom Experten (z.B. SilverDAT) hochladen – daraus wird deine Rechnung an die Versicherung mit allen Positionen 1:1, plus separate Rechnung für den Selbstbehalt.</span></p>${up}</div>`;
+  if(!V2||V2.status==="idle") return `<div class="scan"><p><b>Versicherungsschaden abrechnen</b><br><span class="small muted">Kostenzusammenstellung vom Experten (z.B. SilverDAT) hochladen – daraus wird deine Rechnung an die Versicherung mit allen Positionen 1:1, plus separate Rechnung für den Selbstbehalt.</span></p>${up}<button class="btn ghost" type="button" data-act="vers-manual">Von Hand erfassen</button></div>`;
   if(V2.status==="busy") return `<div class="scan"><p><span class="spinner"></span> ${esc(V2.msg)}</p></div>`;
-  if(V2.status==="error") return `<div class="scan"><p class="neg">${esc(V2.msg)}</p>${up}<button class="btn ghost sm" data-act="vers-close">Schliessen</button></div>`;
+  if(V2.status==="error") return `<div class="scan"><p class="neg">${esc(V2.msg)}</p>${up}<button class="btn ghost" type="button" data-act="vers-manual">Von Hand erfassen</button><button class="btn ghost sm" data-act="vers-close">Schliessen</button></div>`;
   const v=V2.data, c=versCalc(), diff=v.nettoKalk!=null? Math.round((c.netto-v.nettoKalk)*100)/100 : 0;
   const inp=(path,val,ph="",mode="")=>`<input data-vp="${path}" value="${esc(val??"")}" placeholder="${esc(ph)}" ${mode?`inputmode="${mode}"`:""}>`;
   return `<div class="panel"><div class="actions" style="justify-content:space-between"><h2>Versicherungsrechnung prüfen</h2><button class="btn ghost sm" data-act="vers-close">Verwerfen</button></div>
-   ${Math.abs(diff)>0.04?`<div class="banner">Die Summe der Positionen (${chf2(c.netto)}) weicht von der Kalkulation (${chf2(v.nettoKalk)}) um ${chf2(diff)} ab. Bitte Positionen prüfen.</div>`:`<span class="pill ok">Positionen stimmen mit der Kalkulation überein (netto ${chf2(c.netto)})</span>`}
+   ${V2.manual?`<span class="small muted">Positionen aus der Kalkulation abtippen: pro Zeile Text und Total (CHF, ohne MWST). Mit «+ Zeile» weitere Positionen hinzufügen.</span>`:Math.abs(diff)>0.04?`<div class="banner">Die Summe der Positionen (${chf2(c.netto)}) weicht von der Kalkulation (${chf2(v.nettoKalk)}) um ${chf2(diff)} ab. Bitte Positionen prüfen.</div>`:`<span class="pill ok">Positionen stimmen mit der Kalkulation überein (netto ${chf2(c.netto)})</span>`}
    <div class="grid2">
     <div class="fields" style="grid-template-columns:1fr">
      ${!S.set.pflicht?`<div class="banner" style="grid-column:1/-1">Du bist nicht MWST-pflichtig: Die Rechnung geht <b>ohne MWST</b> an die Versicherung – verrechnet wird das Total exkl. MWST der Kalkulation. MWST darfst du nur ausweisen, wenn du bei der ESTV angemeldet bist.</div>`:""}
@@ -919,7 +919,7 @@ function versPanel(){
      <label style="grid-column:1/-1">Fahrgestell-Nr.${inp("data.fahrzeug.vin",v.fahrzeug.vin)}</label>
     </div>
    </div>
-   ${v.gruppen.map((g,gi)=>`<div class="poslist"><span class="small"><b>${esc(g.titel)}</b> <span class="muted">· ${chf2(g.zeilen.reduce((a,z)=>a+(+z.total||0),0))}</span></span>
+   ${v.gruppen.map((g,gi)=>`<div class="poslist"><span class="small"><b>${esc(g.titel)}</b> <span class="muted">· ${chf2(g.zeilen.reduce((a,z)=>a+(+z.total||0),0))}</span> <button type="button" class="btn ghost sm" data-vadd="${gi}">+ Zeile</button></span>
      ${g.zeilen.map((z,zi)=>`<div class="posrow" style="grid-template-columns:1fr 96px auto"><input data-vp="data.gruppen.${gi}.zeilen.${zi}.text" value="${esc(z.text)}" aria-label="Text"><input data-vp="data.gruppen.${gi}.zeilen.${zi}.total" value="${(+z.total).toFixed(2)}" inputmode="decimal" aria-label="Total CHF" style="text-align:right"><button type="button" class="btn ghost sm" data-vdel="${gi}.${zi}" aria-label="Zeile entfernen">✕</button>
        <span class="muted">${z.menge!=null?`${z.menge} ${esc(z.einheit)}`:""}${z.einzel!=null?` à ${chf2(z.einzel)}`:""}</span></div>`).join("")}</div>`).join("")}
    <div class="sum rows" id="vSum"></div>
@@ -943,6 +943,7 @@ function versSum(){ const el=document.getElementById("vSum"); if(!el||S.vers?.st
 }
 function setPath(obj,path,val){ const k=path.split("."); let o=obj; for(let i=0;i<k.length-1;i++) o=o[k[i]]; o[k[k.length-1]]=val; }
 async function versCreate(btn){
+  if(S.vers.manual) S.vers.data.gruppen=S.vers.data.gruppen.map(g=>({...g,zeilen:g.zeilen.filter(z=>String(z.text||"").trim()||+z.total)})).filter(g=>g.zeilen.length);
   const V2=S.vers, v=V2.data, c=versCalc(); if(c.netto<=0){ toast("Keine Positionen vorhanden"); return; }
   if(!V2.emp.name.trim()){ toast("Bitte die Versicherung des Kunden wählen"); document.getElementById("vVers")?.focus(); return; }
   btn.disabled=true; btn.textContent="Erstelle …";
@@ -1600,7 +1601,12 @@ function bind(){
   v.querySelectorAll(".versIn").forEach(inp=>inp.addEventListener("change",e=>{const fl=e.target.files?.[0]; if(fl) versFile(fl);}));
   v.querySelectorAll("[data-vp]").forEach(el=>el.addEventListener("input",()=>{ const pth=el.dataset.vp; const numeric=/\.total$|selbstbehalt$/.test(pth); setPath(S.vers,pth,numeric?num(el.value):el.value); versSum(); }));
   document.getElementById("vSb")?.addEventListener("change",e=>{ S.vers.sbMode=e.target.value; render(); });
-  on("[data-vdel]",b=>{ const [gi,zi]=b.dataset.vdel.split(".").map(Number); const g=S.vers.data.gruppen[gi]; g.zeilen.splice(zi,1); if(!g.zeilen.length) S.vers.data.gruppen.splice(gi,1); render(); });
+  on("[data-vdel]",b=>{ const [gi,zi]=b.dataset.vdel.split(".").map(Number); const g=S.vers.data.gruppen[gi]; g.zeilen.splice(zi,1); if(!g.zeilen.length&&!S.vers.manual) S.vers.data.gruppen.splice(gi,1); render(); });
+  on("[data-vadd]",b=>{ S.vers.data.gruppen[+b.dataset.vadd].zeilen.push({text:"",menge:null,einheit:"",einzel:null,total:0}); render(); const L=document.querySelectorAll(`[data-vp^="data.gruppen.${b.dataset.vadd}.zeilen."][data-vp$=".text"]`); L[L.length-1]?.focus(); });
+  on("[data-act='vers-manual']",()=>{ const z=()=>({text:"",menge:null,einheit:"",einzel:null,total:0});
+    S.vers={status:"review",manual:true,datum:today(),sbMode:"keiner",versIdx:"",emp:{name:"",zeilen:""},
+      data:{...normVers({}),gruppen:[{titel:"Ersatzteile",art:"teile",zeilen:[z()]},{titel:"Arbeitslohn",art:"arbeit",zeilen:[z()]},{titel:"Lackierung",art:"lack",zeilen:[z()]}]}};
+    render(); scrollTo(0,0); });
   on("[data-act='vers-close']",()=>{ S.vers=null; render(); });
   on("[data-act='vers-create']",b=>versCreate(b));
   versSum();
