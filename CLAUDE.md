@@ -64,13 +64,13 @@ AXA Versicherungen AG, General-Guisan-Strasse 40, 8400 Winterthur · Allianz Sui
 Hinweis: meist Hauptsitz-Adressen; spezielle Schadenadressen vom Versicherungsschreiben übernehmen. AXA wünscht Einreichung über GaragenHub-Portal.
 
 ## Stand der Umsetzung (eigenständige App)
-Plan vom Inhaber bestätigt (19.10.2026). Hosting: Cloudflare Pages (gratis, gewerbliche Nutzung erlaubt). Google-Konto: das, welches der Inhaber mit Claude verbunden hat.
+Plan vom Inhaber bestätigt (19.10.2026). Hosting: Cloudflare Workers mit Static Assets (`wrangler.jsonc`, Ordner `public/`, gratis, gewerbliche Nutzung erlaubt; Deploy automatisch bei jedem Push auf `main`). Achtung: Cloudflare leitet `/index.html` auf `/` um – im Service Worker immer `./` cachen, nie `index.html`. Google-Konto: das, welches der Inhaber mit Claude verbunden hat.
 - [x] Schritt 1 – App von Claude.ai gelöst: `public/platform.js` bildet `window.claude.use(...)` als `platform.use(...)` nach (gleiche Schnittstelle). Speicher = IndexedDB (`docs`, `blobs`, `meta`), Dateien sichern = iPhone «Teilen» bzw. Download am Mac, Belege öffnen über `a[data-blob]`.
 - [x] Schritt 2 – PWA: `manifest.webmanifest`, `sw.js` (bei jeder Änderung `VERSION` erhöhen!), Icons aus dem Logo, Bibliotheken und Schriften lokal in `public/vendor` bzw. `public/fonts` (kein CDN → offline).
 - [x] Schritt 3 – Import der Komplett-Sicherung: Daten + Einstellungen (Stundensatz, Versicherer, Selbstbehalt-Modi …) + Belegdateien (Zuordnung über `belegPfad(e)`, gleiche Asset-ID).
 - [ ] Schritt 0 – Konten: Cloudflare, Google Cloud (OAuth-Client, Scope `drive.file`, App auf «In Produktion», sonst laufen Anmeldungen nach 7 Tagen ab), Anthropic Console (Prepaid, Ausgabenlimit).
 - [ ] Schritt 4 – Google-Drive-Sicherung (Hook: `platform.onChange`). Ordnerstruktur wie Komplett-Sicherung: `daten/`, `daten/verlauf/`, `belege/JJJJ/`, `rechnungen/JJJJ/`, `abschluesse/JJJJ/`. Ordner NICHT über den Claude-Drive-Connector anlegen – mit `drive.file` sieht die App nur selbst erstellte Dateien.
-- [ ] Schritt 5 – Beleglesen über `functions/api/…` (Cloudflare Pages Function, Schlüssel nur als Umgebungsvariable, Zugriff nur für das Google-Konto des Inhabers). `platform.use("sample")` muss `json(prompt,{images,signal})` und `limits()` liefern.
+- [ ] Schritt 5 – Beleglesen über `/api/…` (Worker-Skript mit `main` + `assets.run_worker_first` für `/api/*`, Schlüssel nur als Umgebungsvariable, Zugriff nur für das Google-Konto des Inhabers). `platform.use("sample")` muss `json(prompt,{images,signal})` und `limits()` liefern.
 - [ ] Schritt 6 – Parallelbetrieb, dann Umstieg.
 
 ## Dateien
