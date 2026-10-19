@@ -1,6 +1,6 @@
 /* Service Worker: hält die App-Dateien im Gerät, damit das Garagenbuch auch ohne Internet startet.
    Bei jeder neuen Version VERSION erhöhen – dann holt sich die App die neuen Dateien. */
-const VERSION = "gb-2";
+const VERSION = "gb-3";
 const FILES = [
   "./", "platform.js", "manifest.webmanifest",
   "fonts/fonts.css",
@@ -21,7 +21,7 @@ self.addEventListener("fetch", e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== location.origin || url.pathname.startsWith("/api/")) return;
   // Seite selbst: zuerst Internet (neuste Version), sonst gespeicherte Kopie
-  if (req.mode === "navigate") {
+  if (req.mode === "navigate" && new URL("./", location).pathname === url.pathname) {
     e.respondWith(fetch(req).then(r => { const c = r.clone(); caches.open(VERSION).then(x => x.put("./", c)); return r; })
       .catch(() => caches.match("./")));
     return;
