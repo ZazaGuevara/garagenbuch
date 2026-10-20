@@ -63,7 +63,13 @@ Vorgehen: zuerst Plan vorschlagen und vom Inhaber bestätigen lassen, dann in kl
 AXA Versicherungen AG, General-Guisan-Strasse 40, 8400 Winterthur · Allianz Suisse, Richtiplatz 1, 8304 Wallisellen · Die Mobiliar, Bundesgasse 35, 3001 Bern · Zurich Schweiz, Scanning GIC, 8085 Zürich (offizielle Adresse für Schadendokumente) · Helvetia (inkl. ehem. Baloise), St. Alban-Anlage 26, 4002 Basel · Generali, Soodmattenstrasse 2, 8134 Adliswil · Vaudoise, Place de Milan 120, 1001 Lausanne · TCS Versicherungen, Chemin de Blandonnet 4, 1214 Vernier · Simpego (inkl. Dextra), Hohlstrasse 556, 8048 Zürich · ELVIA (Allianz), Richtiplatz 1, 8304 Wallisellen · Sympany, Peter Merian-Weg 4, 4002 Basel · PostFinance Autoversicherung, c/o TONI Digital Solutions AG, Seefeldstrasse 5a, 8008 Zürich.
 Hinweis: meist Hauptsitz-Adressen; spezielle Schadenadressen vom Versicherungsschreiben übernehmen. AXA wünscht Einreichung über GaragenHub-Portal.
 
-## Stand der Umsetzung (eigenständige App)
+## Entscheid 20.10.2026: Claude-App bleibt die Haupt-App
+Der Inhaber will das Belegelesen über sein Claude-Abo behalten und keinen eigenen API-Schlüssel bezahlen. Darum:
+- **Haupt-App = das Claude-Artifact** https://claude.ai/artifact/Wf73PiPxqe6WRQFu3V4vgC (Version 16). Quelltext-Kopie: `app/garagenbuch-claude.html`. Änderungen immer am Artifact (Artifact-Tool mit `url`, vorher lesen) und die Kopie hier nachziehen.
+- **Google-Drive-Sicherung im Artifact** über die `mcp`-Fähigkeit mit dem Claude-Connector «Google Drive» (Werkzeuge `search_files`, `create_file`, `trash_file`). Ordner «Garagenbuch» (existiert, ID `12XCt407eUVeu7ea_Z28d4Di6hiFKOwRs`): `daten/garagenbuch-daten JJJJ-MM-TT.json` (ein Stand pro Tag, gleiches Format wie die Komplett-Sicherung), `belege/JJJJ/`, `rechnungen/JJJJ/`, `abschluesse/JJJJ/`. Der Connector kann nicht überschreiben → neue Datei anlegen, alte Fassung in den Papierkorb. Merkliste im Artifact-Speicher unter `data/users/<id>/store/gdrive/{state,belege_JJJJ,re_JJJJ}`. Einschalten per Knopf (Einstellungen oder Übersicht), danach automatisch bei jeder Änderung, solange die App offen ist.
+- Die eigenständige App (unten, Cloudflare) ist **pausiert**, nicht gelöscht.
+
+## Stand der Umsetzung (eigenständige App, pausiert)
 Plan vom Inhaber bestätigt (19.10.2026). Hosting: Cloudflare Workers mit Static Assets (`wrangler.jsonc`, Ordner `public/`, gratis, gewerbliche Nutzung erlaubt; Deploy automatisch bei jedem Push auf `main`). Achtung: Cloudflare leitet `/index.html` auf `/` um – im Service Worker immer `./` cachen, nie `index.html`. Google-Konto: das, welches der Inhaber mit Claude verbunden hat.
 - [x] Schritt 1 – App von Claude.ai gelöst: `public/platform.js` bildet `window.claude.use(...)` als `platform.use(...)` nach (gleiche Schnittstelle). Speicher = IndexedDB (`docs`, `blobs`, `meta`), Dateien sichern = iPhone «Teilen» bzw. Download am Mac, Belege öffnen über `a[data-blob]`.
 - [x] Schritt 2 – PWA: `manifest.webmanifest`, `sw.js` (bei jeder Änderung `VERSION` erhöhen!), Icons aus dem Logo, Bibliotheken und Schriften lokal in `public/vendor` bzw. `public/fonts` (kein CDN → offline).
@@ -76,6 +82,7 @@ Plan vom Inhaber bestätigt (19.10.2026). Hosting: Cloudflare Workers mit Static
 ## Dateien
 - `worker/index.js` – kleine Server-Funktion (Google-Anmeldung, Drive-Zugang, Beleglesen mit Claude). `package.json` nur für das Anthropic-SDK.
 - `public/` – die eigenständige App (wird so veröffentlicht, kein Build). `index.html` = Geschäftslogik aus dem Artifact, nur an den Plattform-Stellen angepasst.
+- `app/garagenbuch-claude.html` – aktuelle Claude-App (Artifact-Version 16, mit Google-Drive-Sicherung).
 - `app/garagenbuch.html` – Original (Artifact-Version 13), nur noch als Referenz; nicht mehr ändern. Enthält Logo (base64) und Bankdaten als Standardwerte.
 - `assets/logo.png`, `assets/logo-original.pdf` – Logo (Schwarz/Rot: «/// GARAGE DORNACH – Carrosserie | Mechanik | Aufbereitung»). App-Farben passen dazu (Akzent #C8202A).
 - `docs/verlauf.md` – wie die App entstanden ist (Entscheidungen in Reihenfolge)
