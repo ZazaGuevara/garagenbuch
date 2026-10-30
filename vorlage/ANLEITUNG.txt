@@ -1,0 +1,70 @@
+GARAGENBUCH – Buchhaltungs-App für Garagen (Schweiz)
+Einrichten im eigenen Claude
+=====================================================
+
+Was ist das?
+------------
+Eine einfache Buchhaltungs-App für eine Einzelfirma (Garage/Werkstatt) in der Schweiz:
+Belege fotografieren (Claude liest Betrag, Datum, Lieferant aus), Rechnungen und
+Kostenvoranschläge als PDF mit Schweizer QR-Zahlteil, Versicherungsschäden mit
+Selbstbehalt, Auswertung bis zum Reingewinn, AHV-/Steuer-Schätzung, Jahresabschluss.
+Alles wird zusätzlich automatisch in deinem Google Drive gesichert (Ordner «Garagenbuch»).
+
+Die App läuft in deinem eigenen Claude. Deine Daten sieht niemand ausser dir.
+
+
+Was du brauchst
+---------------
+1. Ein Claude-Abo (Pro oder höher) – das Auslesen der Belege ist darin enthalten.
+2. Google Drive mit Claude verbunden:
+   claude.ai → Einstellungen → Connectors → «Google Drive» → Verbinden.
+
+
+Einrichten (ca. 5 Minuten, am besten am Computer)
+-------------------------------------------------
+1. Auf claude.ai einen neuen Chat öffnen.
+2. Die Datei «garagenbuch-vorlage.html» in den Chat ziehen (anhängen).
+3. Diesen Text in den Chat kopieren und senden:
+
+-----8<----- ab hier kopieren -----8<-----
+Bitte veröffentliche die angehängte Datei garagenbuch-vorlage.html unverändert als Artifact mit dem Titel «Garagenbuch». Ändere nichts am Inhalt.
+Gib dem Artifact genau diese Fähigkeiten (capabilities):
+{"assets": {}, "db": {}, "downloads": {}, "sample": {"images": true}, "user": {}, "mcp": {"servers": [{"server": "Google Drive", "tools": ["search_files", "create_file", "trash_file"]}]}}
+Das heisst: Speicher pro Benutzer, Ablage für Belegfotos, Herunterladen von PDFs, Belege mit Claude lesen (auch Fotos) und meinen Google-Drive-Connector mit den Werkzeugen search_files, create_file und trash_file.
+Schick mir danach den Link zur App.
+-----8<----- bis hier kopieren -----8<-----
+
+4. Claude schickt dir einen Link. Öffne ihn und speichere ihn als Lesezeichen
+   (am iPhone: in Safari «Teilen» → «Zum Home-Bildschirm»).
+
+Falls Claude im Chat meldet, dass es das nicht kann: Dasselbe in der Claude-Desktop-App
+im Bereich «Code» machen (Datei in den Projektordner legen, gleichen Text senden).
+
+
+Erste Schritte in der App
+-------------------------
+1. Tab «Einstellungen»:
+   - Firmenname, Adresse, Telefon, E-Mail
+   - Logo hochladen (erscheint auf Rechnungen)
+   - IBAN und Kontoinhaber genau wie bei der Bank (für den QR-Zahlteil)
+   - Stundensatz, Aufschlag auf Teile, Zahlungsfrist
+   - MWST-pflichtig: Ja/Nein (unter CHF 100'000 Umsatz meist Nein)
+   - Steuerbelastung %: mit dem Steuerrechner deines Kantons schätzen
+   - «Speichern»
+2. Ganz oben bei Einstellungen: «Google-Drive-Sicherung» → «Einschalten»
+   → Claude fragt, ob die App Google Drive benutzen darf → «Erlauben».
+   Danach steht dort «✓ In Google Drive gesichert».
+3. Zum Ausprobieren: Auf der Übersicht «Beispieldaten laden» – später mit
+   «Beispieldaten entfernen» wieder löschen.
+
+
+Gut zu wissen
+-------------
+- Gesichert wird automatisch, solange die App offen ist. Im Drive-Ordner «Garagenbuch» liegen:
+  daten/ (ein Stand pro Tag), belege/, rechnungen/ (PDF), abschluesse/ (Jahresabschluss).
+- Die Datei in «daten» kann im Garagenbuch unter «Abschluss & Steuern» →
+  «Sicherung einspielen» wieder eingelesen werden.
+- Geschäftsbücher und Belege 10 Jahre aufbewahren (Art. 958f OR).
+- Die App rechnet nach Schweizer Regeln (MWST, AHV für Selbständige, QR-Rechnung).
+  Die Steuer- und AHV-Zahlen sind Schätzungen, keine Steuerberatung.
+- Die Versicherungsliste (Einstellungen) kannst du anpassen.
