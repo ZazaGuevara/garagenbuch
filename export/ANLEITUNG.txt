@@ -1,0 +1,68 @@
+GARAGENBUCH – Garage Dornach Coskun
+Einrichten im eigenen Claude (mit allen bisherigen Daten)
+==========================================================
+
+In diesem Paket:
+- garagenbuch.html                         die App (mit Firma, Logo, IBAN der Garage)
+- Garagenbuch Sicherung 2026-10-30.zip     alle bisherigen Daten: Buchungen, Rechnungen,
+                                           Belegfotos/-PDFs und Einstellungen
+- ANLEITUNG.txt                            diese Anleitung
+
+Die ZIP-Datei mit der Sicherung NICHT entpacken – die App liest sie so ein.
+
+
+Was du brauchst
+---------------
+1. Ein Claude-Abo (Pro oder höher) – das Auslesen der Belege ist darin enthalten.
+2. Google Drive mit Claude verbunden:
+   claude.ai → Einstellungen → Connectors → «Google Drive» → Verbinden.
+
+
+1. App einrichten (am besten am Computer)
+-----------------------------------------
+1. Auf claude.ai einen neuen Chat öffnen.
+2. Die Datei «garagenbuch.html» in den Chat ziehen (anhängen).
+3. Diesen Text in den Chat kopieren und senden:
+
+-----8<----- ab hier kopieren -----8<-----
+Bitte veröffentliche die angehängte Datei garagenbuch.html unverändert als Artifact mit dem Titel «Garagenbuch». Ändere nichts am Inhalt.
+Gib dem Artifact genau diese Fähigkeiten (capabilities):
+{"assets": {}, "db": {}, "downloads": {}, "sample": {"images": true}, "user": {}, "mcp": {"servers": [{"server": "Google Drive", "tools": ["search_files", "create_file", "trash_file"]}]}}
+Das heisst: Speicher pro Benutzer, Ablage für Belegfotos, Herunterladen von PDFs, Belege mit Claude lesen (auch Fotos) und meinen Google-Drive-Connector mit den Werkzeugen search_files, create_file und trash_file.
+Schick mir danach den Link zur App.
+-----8<----- bis hier kopieren -----8<-----
+
+4. Claude schickt dir einen Link. Öffne ihn und speichere ihn als Lesezeichen
+   (am iPhone: in Safari «Teilen» → «Zum Home-Bildschirm»).
+
+Falls Claude im Chat meldet, dass es das nicht kann: Dasselbe in der Claude-Desktop-App
+im Bereich «Code» machen (Datei in den Projektordner legen, gleichen Text senden).
+
+
+2. Bisherige Daten einspielen (einmalig)
+----------------------------------------
+1. In der App den Tab «Abschluss & Steuern» öffnen.
+2. Ganz unten bei «Datensicherung» auf «Sicherung einspielen» tippen.
+3. Die Datei «Garagenbuch Sicherung 2026-10-30.zip» wählen.
+4. Es erscheint: «… mit 8 Buchungen, 4 Rechnungen und 2 Belegdateien gefunden»
+   → «Jetzt einspielen».
+5. Fertig: Buchungen, Rechnungen, Belege und Einstellungen sind da.
+   Die nächste Rechnung bekommt automatisch die Nummer RE-2026-005.
+
+Bitte nur EINMAL einspielen.
+
+
+3. Google-Drive-Sicherung einschalten
+-------------------------------------
+Tab «Einstellungen» → ganz oben «Google-Drive-Sicherung» → «Einschalten»
+→ Claude fragt, ob die App Google Drive benutzen darf → «Erlauben».
+Danach steht dort «✓ In Google Drive gesichert». Ab dann wird automatisch alles in
+deinem Google Drive im Ordner «Garagenbuch» abgelegt, solange die App offen ist:
+daten/ (ein Stand pro Tag), belege/, rechnungen/ (PDF), abschluesse/.
+
+
+Gut zu wissen
+-------------
+- Firmendaten, Logo und Bankverbindung sind schon eingetragen (Tab «Einstellungen»).
+- Geschäftsbücher und Belege 10 Jahre aufbewahren (Art. 958f OR).
+- Die Steuer- und AHV-Zahlen sind Schätzungen, keine Steuerberatung.
